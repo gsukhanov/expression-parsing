@@ -39,10 +39,12 @@ template <typename T> Head<T>::Head() {
 }
 
 template <typename T> Head<T>::Head(const Head<T>& other) {
+    Node<T>::kind = NodeKind::head;
     next = other.next->clone();
 }
 
 template <typename T> Head<T>::Head(Head<T>&& other) {
+    Node<T>::kind = NodeKind::head;
     next = other.next;
     other.next = nullptr;
 }
@@ -57,12 +59,14 @@ template <typename T> Operation<T>::Operation() {
 }
 
 template <typename T> Operation<T>::Operation(const Operation<T>& other) {
+    Node<T>::kind = NodeKind::op;
     type = other.type;
     left = other.left->clone();
     right = other.right->clone();
 }
 
 template <typename T> Operation<T>::Operation(Operation<T>&& other) {
+    Node<T>::kind = NodeKind::op;
     type = other.type;
     left = other.left;
     right = other.right;
@@ -88,11 +92,13 @@ template <typename T> Function<T>::Function(FunctionType __type, Node<T> *__arg)
 }
 
 template <typename T> Function<T>::Function(const Function<T>& other) {
+    Node<T>::kind = NodeKind::func;
     type = other.type;
     arg = other.arg->clone();
 }
 
 template <typename T> Function<T>::Function(Function<T>&& other) {
+    Node<T>::kind = NodeKind::func;
     type = other.type;
     arg = other.arg;
     other.arg = nullptr;
@@ -162,21 +168,25 @@ template <typename T> Expression<T>& Expression<T>::operator=(Expression<T>&& ot
 }
 
 template <typename T> Head<T>& Head<T>::operator=(const Head& other) {
+    Node::kind = NodeKind::head;
     next = other.next->clone();
 }
 
 template <typename T> Head<T>& Head<T>::operator=(Head&& other) {
+    Node::kind = NodeKind::head;
     next = other.next;
     other.next = nullptr;
 }
 
 template <typename T> Operation<T>& Operation<T>::operator=(const Operation<T>& other) {
+    Node::kind = NodeKind::op;
     type = other.type;
     left = other.left->clone();
     right = other.right->clone();
 }
 
 template <typename T> Operation<T>& Operation<T>::operator=(Operation<T>&& other) {
+    Node::kind = NodeKind::op;
     type = other.type;
     left = other.left;
     right = other.right;
@@ -185,14 +195,16 @@ template <typename T> Operation<T>& Operation<T>::operator=(Operation<T>&& other
 }
 
 template <typename T> Function<T>& Function<T>::operator=(const Function<T>& other) {
+    Node::kind = NodeKind::func;
     type = other.type;
     arg = other.arg->clone();
 }
 
 template <typename T> Function<T>& Function<T>::operator=(Function<T>&& other) {
+    Node::kind = NodeKind::func;
     type = other.type;
     arg = other.arg;
-    other.arg = nullptr;
+    other.arg = nullptr;    
 }
 
 
