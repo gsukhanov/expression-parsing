@@ -18,6 +18,17 @@ template <typename T> Expression<T>::Expression(std::string var) {
     head = __head;
 }
 
+template <typename T> Expression<T>::Expression(const Expression<T>& other){
+    head = new Head<T>(*(other.head));
+    variables = other.get_variables();
+}
+
+template <typename T> Expression<T>::Expression(Expression<T>&& other){
+    head = other.head;
+    other.head = nullptr;
+    variables = other.get_variables();
+}
+
 template <typename T> Expression<T>::Expression(Head<T> *__head, std::unordered_set<std::string> __variables) {
     head = __head;
     variables = __variables;
@@ -27,6 +38,15 @@ template <typename T> Head<T>::Head() {
     Node<T>::kind = NodeKind::head;
 }
 
+template <typename T> Head<T>::Head(const Head<T>& other) {
+    next = other.next->clone();
+}
+
+template <typename T> Head<T>::Head(Head<T>&& other) {
+    next = other.next;
+    other.next = nullptr;
+}
+
 template <typename T> Head<T>::Head(Node<T> *__next) {
     Node<T>::kind = NodeKind::head;
     next = __next;
@@ -34,6 +54,20 @@ template <typename T> Head<T>::Head(Node<T> *__next) {
 
 template <typename T> Operation<T>::Operation() {
     Node<T>::kind = NodeKind::op;
+}
+
+template <typename T> Operation<T>::Operation(const Operation<T>& other) {
+    type = other.type;
+    left = other.left->clone();
+    right = other.right->clone();
+}
+
+template <typename T> Operation<T>::Operation(Operation<T>&& other) {
+    type = other.type;
+    left = other.left;
+    right = other.right;
+    other.left = nullptr;
+    other.right = nullptr;
 }
 
 template <typename T> Operation<T>::Operation(OperationType __type, Node<T> *__left, Node<T> *__right) {
@@ -53,6 +87,17 @@ template <typename T> Function<T>::Function(FunctionType __type, Node<T> *__arg)
     arg = __arg;
 }
 
+template <typename T> Function<T>::Function(const Function<T>& other) {
+    type = other.type;
+    arg = other.arg->clone();
+}
+
+template <typename T> Function<T>::Function(Function<T>&& other) {
+    type = other.type;
+    arg = other.arg;
+    other.arg = nullptr;
+}
+
 template <typename T> Variable<T>::Variable() {
     Node<T>::kind = NodeKind::var;
 }
@@ -69,6 +114,103 @@ template <typename T> Value<T>::Value() {
 template <typename T> Value<T>::Value(T __value) {
     Node<T>::kind = NodeKind::val;
     value = __value;
+}
+
+//---------------------------------------------------------------------------------------------------------------
+// Функции клонирования нод
+//---------------------------------------------------------------------------------------------------------------
+
+template <typename T> Head<T>* Head<T>::clone() {
+    std::cerr << "Something went wrong, head is an inner node of the tree.\n";
+    exit(-1);
+    return nullptr;
+}
+
+template <typename T> Operation<T>* Operation<T>::clone() {
+    Operation<T> *copy = new Operation<T>(type, left->clone(), right->clone());
+    return copy;
+}
+
+template <typename T> Function<T>* Function<T>::clone() {
+    Function<T> *copy = new Function<T>(type, arg->clone());
+    return copy;
+}
+
+template <typename T> Variable<T>* Variable<T>::clone() {
+    Variable<T> *copy = new Variable<T>(name);
+    return copy;
+}
+
+template <typename T> Value<T>* Value<T>::clone() {
+    Value<T> *copy = new Value<T>(value);
+    return copy;
+}
+
+//---------------------------------------------------------------------------------------------------------------
+// Операторы копирования и перемещения
+//---------------------------------------------------------------------------------------------------------------
+
+template <typename T> Expression<T>& Expression<T>::operator=(const Expression<T>& other){
+    head = new Head<T>(other->head);
+    variables = other.get_variables();
+}
+
+template <typename T> Expression<T>& Expression<T>::operator=(Expression<T>&& other){
+    head = other.head;
+    other.head = nullptr;
+    variables = other.get_variables();
+}
+
+template <typename T> Head<T>& Head<T>::operator=(const Head& other) {
+    next = other.next->clone();
+}
+
+template <typename T> Head<T>& Head<T>::operator=(Head&& other) {
+    next = other.next;
+    other.next = nullptr;
+}
+
+template <typename T> Operation<T>& Operation<T>::operator=(const Operation<T>& other) {
+    type = other.type;
+    left = other.left->clone();
+    right = other.right->clone();
+}
+
+template <typename T> Operation<T>& Operation<T>::operator=(Operation<T>&& other) {
+    type = other.type;
+    left = other.left;
+    right = other.right;
+    other.left = nullptr;
+    other.right = nullptr;
+}
+
+template <typename T> Function<T>& Function<T>::operator=(const Function<T>& other) {
+    type = other.type;
+    arg = other.arg->clone();
+}
+
+template <typename T> Function<T>& Function<T>::operator=(Function<T>&& other) {
+    type = other.type;
+    arg = other.arg;
+    other.arg = nullptr;
+}
+
+
+//---------------------------------------------------------------------------------------------------------------
+// Деструкторы
+//---------------------------------------------------------------------------------------------------------------
+
+template <typename T> Expression<T>::~Expression() {
+    delete head;
+}
+
+template <typename T> Operation<T>::~Operation() {
+    delete left;
+    delete right;
+}
+
+template <typename T> Function<T>::~Function() {
+    delete arg;
 }
 
 //---------------------------------------------------------------------------------------------------------------
@@ -362,19 +504,68 @@ template <typename T> T Value<T>::calculate() {
 }
 
 //---------------------------------------------------------------------------------------------------------------
+// Функции дифференцирования:
+//---------------------------------------------------------------------------------------------------------------
+
+
+template <typename T> Expression<T> Expression<T>::differentiate(std::string __name) const {
+    Expression<T> copy = Expression<T>(*this);
+    copy.head = differentiate(head);
+    return copy;
+}
+
+/*template <typename T> Node<T>* differentiate(Node<T> *node, std::string __name) {
+    if (node->kind == NodeKind::head) {
+        Head<T> *head = dynamic_cast<Head<T>*>(node);
+        node = differentiate(head->next);
+    }
+    else if (node->kind == NodeKind::op) {
+
+    }
+    else if (node->kind == NodeKind::func) {
+        Function<T> *func = dynamic_cast<Function<T>*>(node);
+        if (func->type == FunctionType::sin) {
+            Node<T> *inner = func->arg->clone()->differentiate();
+            func->type = FunctionType::cos;
+            if (inner->kind = NodeKind::val) {
+                Value<T> *inner_val = dynamic_cast<Value<T>*>(inner);
+//                if (inner_val->value)
+//надо придумать проверку на нули и единицы, чтобы упрощать выражение в ходе вычислений
+            }
+        }
+    }
+    else if (node->kind == NodeKind::var) {
+        Variable<T>* var = dynamic_cast<Variable<T>*>(node);
+        if (var->name == __name) {
+            delete node;
+            node = new Value(1);
+        }
+        else {
+            delete node;
+            node = new Value(0);
+        }
+    }
+    else if (node->kind == NodeKind::val) {
+        delete node;
+        node = new Value(0);
+    }
+    return node;
+}*/
+
+//---------------------------------------------------------------------------------------------------------------
 // Тест для проверки:
 //---------------------------------------------------------------------------------------------------------------
 
 int main(void) {
-    Expression<double> e("x");
-    Expression<double> f("y");
+    Expression<double> e("lambda");
+    Expression<double> f("phi");
     e += ln(f);
     Expression<double> g(e);
     std::cout << e << "\n";
-    e.self_substitute("x", 12.6);
+    e.self_substitute("lambda", 12.6);
     std::cout << e << "\n";
-    e.self_substitute("y", 15.2);
+    e.self_substitute("phi", 15.2);
     std::cout << e << "\n";
-    std::cout << g.calculate({"x", "y"}, {12.6, 15.2}) << "\n";
+    std::cout << g.calculate({"lambda", "phi"}, {12.6, 15.2}) << "\n";
     return 0;
 }
