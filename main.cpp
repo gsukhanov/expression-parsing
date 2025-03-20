@@ -1,4 +1,4 @@
-#include "Expression.hpp"
+#include "Expression/Expression.hpp"
 #include <regex>
 #include <algorithm>
 
@@ -51,7 +51,6 @@ int main(int argc, char* argv[]) {
                 }
                 vals.push_back(val);
             }
-            std::cout << expr << "\n";
             std::complex<long double> output = expr.calculate(vars, vals);
             std::cout << output.real() << " + " << output.imag() << "i\n";
         }
@@ -73,11 +72,6 @@ int main(int argc, char* argv[]) {
                 long double val = std::stold(std::string(it + 1, str.end()));
                 vals.push_back(val);
             }
-            std::cout << expr << "\n";
-            for(auto it = vars.begin(); it < vars.end(); it++) std::cout << *it << " ";
-            std::cout << "\n";
-            for(auto it = vals.begin(); it < vals.end(); it++) std::cout << *it << " ";
-            std::cout << "\n";
             long double output = expr.calculate(vars, vals);
             std::cout << output << "\n";
         }

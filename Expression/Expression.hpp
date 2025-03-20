@@ -204,14 +204,16 @@ bool isone(std::complex<long double> number) {
     return isone(number.real()) && iszero(number.imag());
 }
 
-template<typename T> std::string two_string(std::complex<T> number) {
-    if (iszero(number.imag())) return std::to_string(number.real());
-    if (iszero(number.real())) return std::to_string(number.imag()) + "i";
-    return "(" + std::to_string(number.real()) + " + " + std::to_string(number.imag()) + "i)";
+std::string two_string(long double number) {
+    char a[20];
+    sprintf(a, "%.15g", number);
+    return std::string(a);
 }
 
-std::string two_string(long double number) {
-    return std::to_string(number);
+template<typename T> std::string two_string(std::complex<T> number) {
+    if (iszero(number.imag())) return two_string(number.real());
+    if (iszero(number.real())) return two_string(number.imag()) + "i";
+    return "(" + two_string(number.real()) + " + " + two_string(number.imag()) + "i)";
 }
 
 //---------------------------------------------------------------------------------------------------------------
@@ -750,11 +752,8 @@ template <typename T> T Expression<T>::calculate(std::vector<std::string> vars, 
     Expression<T> copy = *this;
     auto itval = vals.begin();
     for (auto it = vars.begin(); it < vars.end(); it++) {
-        std::cout << *it << " " << *itval;
-        std::cout << "\n";
         if (copy.get_variables().find(*it) != copy.get_variables().end()) {
             copy.self_substitute(*it, *itval);
-            std::cout << copy << "\n";
         }
         else {
             std::cerr <<"\"" << *it << "\" - no such variable!";
@@ -807,7 +806,7 @@ template <typename T> T Operation<T>::calculate() {
     if (type == OperationType::mult) return left->calculate() * right->calculate();
     if (type == OperationType::div) return left->calculate() / right->calculate();
     if (type == OperationType::pow) return std::pow(left->calculate(), right->calculate());
-    std::cout << "Something went wrong, an operation has no type.\n";
+    std::cerr << "Something went wrong, an operation has no type.\n";
     exit(EXIT_FAILURE);
 }
 
@@ -828,7 +827,7 @@ template <typename T> T Function<T>::calculate() {
     if (type == FunctionType::cos) return std::cos(arg->calculate());
     if (type == FunctionType::ln) return std::log(arg->calculate());
     if (type == FunctionType::exp) return std::exp(arg->calculate());
-    std::cout << "Something went wrong, a function has no type.\n";
+    std::cerr << "Something went wrong, a function has no type.\n";
     exit(EXIT_FAILURE);
 }
 

@@ -11,7 +11,7 @@ install: default_target
 	cd build && sudo make install
 
 uninstall:
-	rm -f ~/bin/differentiator
+	sudo rm -f ~/bin/differentiator
 
 clear:
 	rm -rf ./build
