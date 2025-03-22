@@ -1,1 +1,1 @@
-add_library(Expression STATIC Expression.cpp Expression.hpp)
+add_library(SGAExpression STATIC Expression.cpp Expression.hpp)
