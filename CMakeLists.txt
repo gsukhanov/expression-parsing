@@ -8,9 +8,9 @@ include_directories(SGAExpression)
 add_subdirectory(SGAExpression)
 
 add_executable(differentiator main.cpp)
-target_link_libraries(differentiator Expression)
+target_link_libraries(differentiator SGAExpression)
 
 add_executable(tests tests.cpp)
-target_link_libraries(tests Expression)
+target_link_libraries(tests SGAExpression)
 
 install(TARGETS differentiator DESTINATION ~/bin)
