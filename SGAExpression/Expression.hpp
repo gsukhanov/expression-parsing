@@ -169,42 +169,50 @@ template <typename T> std::shared_ptr<Node<T>> simpl_func(std::shared_ptr<Node<T
 
 //Вспомогательные ункции парсинга.
 void skip_spaces(std::string::iterator *it, std::string::iterator end);
-long double parse_number(std::string::iterator *it, std::string::iterator end);
+double parse_number(std::string::iterator *it, std::string::iterator end);
 std::string parse_string(std::string::iterator *it, std::string::iterator end);
 void skip_all(std::string::iterator *it, std::string::iterator end);
 void find_end(std::string::iterator *it, std::string::iterator end);
 
 //Парсинг действительных выражений.
-std::shared_ptr<Node<long double>> parse_real(std::string::iterator *it, std::string::iterator end, std::unordered_set<std::string> *vars);
+std::shared_ptr<Node<double>> parse_real(std::string::iterator *it, std::string::iterator end, std::unordered_set<std::string> *vars);
 
 //Парсинг комплексных выражений.
-std::shared_ptr<Node<std::complex<long double>>> parse_complex(std::string::iterator *it, std::string::iterator end, std::unordered_set<std::string> *vars);
+std::shared_ptr<Node<std::complex<double>>> parse_complex(std::string::iterator *it, std::string::iterator end, std::unordered_set<std::string> *vars);
 
 //Функции создания выражения на основе строки.
-Expression<long double> construct_real(std::string input);
-Expression<std::complex<long double>> construct_complex(std::string input);
+Expression<double> construct_real(std::string input);
+Expression<std::complex<double>> construct_complex(std::string input);
 
 template <typename T> void Expression<T>::display_variables() const {
     for (auto it = variables.begin(); it != variables.end(); it++) std::cout << *it << " ";
 }
 
-bool iszero(long double number) {
+bool iszero(double number) {
     return std::abs(number) < 1e-6;
 }
 
-bool iszero(std::complex<long double> number) {
+bool iszero(std::complex<double> number) {
     return std::abs(number) < 1e-6;
 }
 
-bool isone(long double number) {
+bool isone(double number) {
     return std::abs(number - 1) < 1e-6;
 }
 
-bool isone(std::complex<long double> number) {
+bool isone(std::complex<double> number) {
     return isone(number.real()) && iszero(number.imag());
 }
 
-std::string two_string(long double number) {
+bool isnegative(double number) {
+    return number < 1e-6;
+}
+
+bool isnegative(std::complex<double> number) {
+    return false;
+}
+
+std::string two_string(double number) {
     char a[20];
     sprintf(a, "%.15g", number);
     return std::string(a);
@@ -627,6 +635,15 @@ template <typename T> std::shared_ptr<Node<T>> simpl_func(std::shared_ptr<Node<T
     else if (node->kind == NodeKind::func) {
         std::shared_ptr<Function<T>> function = std::dynamic_pointer_cast<Function<T>>(node);
         function->arg = simpl_func(function->arg);
+        if (function->type == FunctionType::ln) {
+            if (function->arg->kind == NodeKind::val) {
+                std::shared_ptr<Value<T>> value = std::dynamic_pointer_cast<Value<T>>(function->arg);
+                if (isnegative(value->value)) {
+                    std::cerr << "Logarithm of a negative value!";
+                    exit(EXIT_FAILURE);
+                }
+            }
+        }
         if (function->arg->kind == NodeKind::val) {
             std::shared_ptr<Node<T>> value = std::make_shared<Value<T>>(function->calculate());
             node = value;
@@ -639,6 +656,7 @@ template <typename T> std::shared_ptr<Node<T>> simpl_func(std::shared_ptr<Node<T
         if (operation->right->kind == NodeKind::val) {
             std::shared_ptr<Value<T>> right_value = std::dynamic_pointer_cast<Value<T>>(operation->right);
             if (operation->type == OperationType::div && iszero(right_value->value)) {
+                std::cerr << "Division by zero!";
                 exit(EXIT_FAILURE);
             }
             else if (operation->left->kind == NodeKind::val) {
@@ -761,6 +779,7 @@ template <typename T> T Expression<T>::calculate(std::vector<std::string> vars, 
         }
         itval++;
     }
+    copy.simplify();
     return copy.head->calculate();
 }
 
@@ -966,14 +985,14 @@ void skip_spaces(std::string::iterator *it, std::string::iterator end) {
     while (*it < end && **it == ' ') (*it)++;
 }
 
-long double parse_number(std::string::iterator *it, std::string::iterator end) {
+double parse_number(std::string::iterator *it, std::string::iterator end) {
     auto start = *it;
     while (*it < end && **it >= '0' && **it <= '9') (*it)++;
     if (**it == '.' && *it + 1 < end && *(*it + 1) <= '9' && *(*it + 1) >= '0' ) {
         (*it)++;
         while (**it > '0' && **it < '9' && *it < end) (*it)++;
     }
-    return std::stold(std::string(start, *it));
+    return std::stod(std::string(start, *it));
 }
 
 std::string parse_string(std::string::iterator *it, std::string::iterator end) {
@@ -996,8 +1015,8 @@ void find_end(std::string::iterator *it, std::string::iterator end) {
     }
 }
 
-std::shared_ptr<Node<long double>> parse_real(std::string::iterator *it, std::string::iterator end, std::unordered_set<std::string> *vars) {
-    std::shared_ptr<Node<long double>> current = nullptr;
+std::shared_ptr<Node<double>> parse_real(std::string::iterator *it, std::string::iterator end, std::unordered_set<std::string> *vars) {
+    std::shared_ptr<Node<double>> current = nullptr;
     while (*it < end && **it && **it != ')') {
         if (**it == ' ') skip_spaces(it, end);
         else if (**it == '(') {
@@ -1005,13 +1024,13 @@ std::shared_ptr<Node<long double>> parse_real(std::string::iterator *it, std::st
             current = parse_real(it, end, vars);
             (*it)++;
         }
-        else if (**it >= '0' && **it <= '9') current = std::make_shared<Value<long double>>(parse_number(it, end));
+        else if (**it >= '0' && **it <= '9') current = std::make_shared<Value<double>>(parse_number(it, end));
         else if ((**it >= 'a' && **it <= 'z') || (**it >= 'A' && **it <= 'Z')) {
             std::string word = parse_string(it, end);
             if (word == "sin") {
                 if (**it == '(') {
                     (*it)++;
-                    current = std::make_shared<Function<long double>>(FunctionType::sin, parse_real(it, end, vars));
+                    current = std::make_shared<Function<double>>(FunctionType::sin, parse_real(it, end, vars));
                     (*it)++;
                 }
                 else {
@@ -1022,7 +1041,7 @@ std::shared_ptr<Node<long double>> parse_real(std::string::iterator *it, std::st
             else if (word == "cos") {
                 if (**it == '(') {
                     (*it)++;
-                    current = std::make_shared<Function<long double>>(FunctionType::cos, parse_real(it, end, vars));
+                    current = std::make_shared<Function<double>>(FunctionType::cos, parse_real(it, end, vars));
                     (*it)++;
                 }
                 else {
@@ -1033,7 +1052,7 @@ std::shared_ptr<Node<long double>> parse_real(std::string::iterator *it, std::st
             else if (word == "exp") {
                 if (**it == '(') {
                     (*it)++;
-                    current = std::make_shared<Function<long double>>(FunctionType::exp, parse_real(it, end, vars));
+                    current = std::make_shared<Function<double>>(FunctionType::exp, parse_real(it, end, vars));
                     (*it)++;
                 }
                 else {
@@ -1044,7 +1063,7 @@ std::shared_ptr<Node<long double>> parse_real(std::string::iterator *it, std::st
             else if (word == "ln") {
                 if (**it == '(') {
                     (*it)++;
-                    current = std::make_shared<Function<long double>>(FunctionType::ln, parse_real(it, end, vars));
+                    current = std::make_shared<Function<double>>(FunctionType::ln, parse_real(it, end, vars));
                     (*it)++;
                 }
                 else {
@@ -1054,13 +1073,13 @@ std::shared_ptr<Node<long double>> parse_real(std::string::iterator *it, std::st
             }
             else {
                 vars->insert(word);
-                current = std::make_shared<Variable<long double>>(word);
+                current = std::make_shared<Variable<double>>(word);
             }
         }
         else if (**it == '+') {
             (*it)++;
             skip_spaces(it, end);
-            std::shared_ptr<Operation<long double>> operation = std::make_shared<Operation<long double>>(OperationType::add, current, parse_real(it, end, vars));
+            std::shared_ptr<Operation<double>> operation = std::make_shared<Operation<double>>(OperationType::add, current, parse_real(it, end, vars));
             current = operation;
         }
         else if (**it == '-') {
@@ -1068,7 +1087,7 @@ std::shared_ptr<Node<long double>> parse_real(std::string::iterator *it, std::st
             skip_spaces(it, end);
             auto copy = *it;
             find_end(&copy, end);
-            std::shared_ptr<Operation<long double>> operation = std::make_shared<Operation<long double>>(OperationType::sub, current, parse_real(it, copy, vars));
+            std::shared_ptr<Operation<double>> operation = std::make_shared<Operation<double>>(OperationType::sub, current, parse_real(it, copy, vars));
             current = operation;
         }
         else if (**it == '*') {
@@ -1076,7 +1095,7 @@ std::shared_ptr<Node<long double>> parse_real(std::string::iterator *it, std::st
             skip_spaces(it, end);
             auto copy = *it;
             find_end(&copy, end);
-            std::shared_ptr<Operation<long double>> operation = std::make_shared<Operation<long double>>(OperationType::mult, current, parse_real(it, copy, vars));
+            std::shared_ptr<Operation<double>> operation = std::make_shared<Operation<double>>(OperationType::mult, current, parse_real(it, copy, vars));
             current = operation;
         }
         else if (**it == '/') {
@@ -1084,7 +1103,7 @@ std::shared_ptr<Node<long double>> parse_real(std::string::iterator *it, std::st
             skip_spaces(it, end);
             auto copy = *it;
             find_end(&copy, end);
-            std::shared_ptr<Operation<long double>> operation = std::make_shared<Operation<long double>>(OperationType::div, current, parse_real(it, copy, vars));
+            std::shared_ptr<Operation<double>> operation = std::make_shared<Operation<double>>(OperationType::div, current, parse_real(it, copy, vars));
             current = operation;
         }
         else if (**it == '^') {
@@ -1092,7 +1111,7 @@ std::shared_ptr<Node<long double>> parse_real(std::string::iterator *it, std::st
             skip_spaces(it, end);
             auto copy = *it;
             find_end(&copy, end);
-            std::shared_ptr<Operation<long double>> operation = std::make_shared<Operation<long double>>(OperationType::pow, current, parse_real(it, copy, vars));
+            std::shared_ptr<Operation<double>> operation = std::make_shared<Operation<double>>(OperationType::pow, current, parse_real(it, copy, vars));
             current = operation;
         }
         else {
@@ -1103,8 +1122,8 @@ std::shared_ptr<Node<long double>> parse_real(std::string::iterator *it, std::st
     return current;
 }
 
-std::shared_ptr<Node<std::complex<long double>>> parse_complex(std::string::iterator *it, std::string::iterator end, std::unordered_set<std::string> *vars) {
-    std::shared_ptr<Node<std::complex<long double>>> current = nullptr;
+std::shared_ptr<Node<std::complex<double>>> parse_complex(std::string::iterator *it, std::string::iterator end, std::unordered_set<std::string> *vars) {
+    std::shared_ptr<Node<std::complex<double>>> current = nullptr;
     while (*it < end && **it != ')') {
         if (**it == ' ') skip_spaces(it, end);
         else if (**it == '(') {
@@ -1113,15 +1132,15 @@ std::shared_ptr<Node<std::complex<long double>>> parse_complex(std::string::iter
             (*it)++;
         }
         else if (**it >= '0' && **it <= '9') {
-            long double first = parse_number(it, end);
+            double first = parse_number(it, end);
             if (**it == ' ') skip_spaces(it, end);
             if (**it == '+') {
                 (*it)++;
                 if (**it == ' ') skip_spaces(it, end);
                 if (**it >= '0' && **it <= '9') {
-                    long double second = parse_number(it, end);
+                    double second = parse_number(it, end);
                     if (**it == 'i') {
-                        current = std::make_shared<Value<std::complex<long double>>>(std::complex<long double>(first, second));
+                        current = std::make_shared<Value<std::complex<double>>>(std::complex<double>(first, second));
                         (*it)++;
                         if (*it < end && ((**it >= 'a' && **it <= 'z') || (**it <= 'Z' && **it >= 'A'))) {
                             std::cerr << "Cannot parse expression, expected a complex number!\n";
@@ -1129,20 +1148,20 @@ std::shared_ptr<Node<std::complex<long double>>> parse_complex(std::string::iter
                         }
                     }
                     else {
-                        std::shared_ptr<Value<std::complex<long double>>> left = std::make_shared<Value<std::complex<long double>>>(std::complex<long double>(first, 0));
-                        std::shared_ptr<Value<std::complex<long double>>> right = std::make_shared<Value<std::complex<long double>>>(std::complex<long double>(second, 0));
-                        current = std::make_shared<Operation<std::complex<long double>>>(OperationType::add, left, right);
+                        std::shared_ptr<Value<std::complex<double>>> left = std::make_shared<Value<std::complex<double>>>(std::complex<double>(first, 0));
+                        std::shared_ptr<Value<std::complex<double>>> right = std::make_shared<Value<std::complex<double>>>(std::complex<double>(second, 0));
+                        current = std::make_shared<Operation<std::complex<double>>>(OperationType::add, left, right);
                     }
                 }
             }
-            else current = std::make_shared<Value<std::complex<long double>>>(std::complex<long double>(first, 0));
+            else current = std::make_shared<Value<std::complex<double>>>(std::complex<double>(first, 0));
         }
         else if ((**it >= 'a' && **it <= 'z') || (**it >= 'A' && **it <= 'Z')) {
             std::string word = parse_string(it, end);
             if (word == "sin") {
                 if (**it == '(') {
                     (*it)++;
-                    current = std::make_shared<Function<std::complex<long double>>>(FunctionType::sin, parse_complex(it, end, vars));
+                    current = std::make_shared<Function<std::complex<double>>>(FunctionType::sin, parse_complex(it, end, vars));
                     (*it)++;
                 }
                 else {
@@ -1153,7 +1172,7 @@ std::shared_ptr<Node<std::complex<long double>>> parse_complex(std::string::iter
             else if (word == "cos") {
                 if (**it == '(') {
                     (*it)++;
-                    current = std::make_shared<Function<std::complex<long double>>>(FunctionType::sin, parse_complex(it, end, vars));
+                    current = std::make_shared<Function<std::complex<double>>>(FunctionType::sin, parse_complex(it, end, vars));
                     (*it)++;
                 }
                 else {
@@ -1164,7 +1183,7 @@ std::shared_ptr<Node<std::complex<long double>>> parse_complex(std::string::iter
             else if (word == "exp") {
                 if (**it == '(') {
                     (*it)++;
-                    current = std::make_shared<Function<std::complex<long double>>>(FunctionType::sin, parse_complex(it, end, vars));
+                    current = std::make_shared<Function<std::complex<double>>>(FunctionType::sin, parse_complex(it, end, vars));
                     (*it)++;
                 }
                 else {
@@ -1175,7 +1194,7 @@ std::shared_ptr<Node<std::complex<long double>>> parse_complex(std::string::iter
             else if (word == "ln") {
                 if (**it == '(') {
                     (*it)++;
-                    current = std::make_shared<Function<std::complex<long double>>>(FunctionType::sin, parse_complex(it, end, vars));
+                    current = std::make_shared<Function<std::complex<double>>>(FunctionType::sin, parse_complex(it, end, vars));
                     (*it)++;
                 }
                 else {
@@ -1184,17 +1203,17 @@ std::shared_ptr<Node<std::complex<long double>>> parse_complex(std::string::iter
                 }
             }
             else if (word == "i") {
-                current = std::make_shared<Value<std::complex<long double>>>(std::complex<long double>(0, 1));
+                current = std::make_shared<Value<std::complex<double>>>(std::complex<double>(0, 1));
             }
             else {
                 vars->insert(word);
-                current = std::make_shared<Variable<std::complex<long double>>>(word);
+                current = std::make_shared<Variable<std::complex<double>>>(word);
             }
         }
         else if (**it == '+') {
             (*it)++;
             skip_spaces(it, end);
-            std::shared_ptr<Operation<std::complex<long double>>> operation = std::make_shared<Operation<std::complex<long double>>>(OperationType::add, current, parse_complex(it, end, vars));
+            std::shared_ptr<Operation<std::complex<double>>> operation = std::make_shared<Operation<std::complex<double>>>(OperationType::add, current, parse_complex(it, end, vars));
             current = operation;
         }
         else if (**it == '-') {
@@ -1202,7 +1221,7 @@ std::shared_ptr<Node<std::complex<long double>>> parse_complex(std::string::iter
             skip_spaces(it, end);
             auto copy = *it;
             find_end(&copy, end);
-            std::shared_ptr<Operation<std::complex<long double>>> operation = std::make_shared<Operation<std::complex<long double>>>(OperationType::sub, current, parse_complex(it, copy, vars));
+            std::shared_ptr<Operation<std::complex<double>>> operation = std::make_shared<Operation<std::complex<double>>>(OperationType::sub, current, parse_complex(it, copy, vars));
             current = operation;
         }
         else if (**it == '*') {
@@ -1210,7 +1229,7 @@ std::shared_ptr<Node<std::complex<long double>>> parse_complex(std::string::iter
             skip_spaces(it, end);
             auto copy = *it;
             find_end(&copy, end);
-            std::shared_ptr<Operation<std::complex<long double>>> operation = std::make_shared<Operation<std::complex<long double>>>(OperationType::mult, current, parse_complex(it, copy, vars));
+            std::shared_ptr<Operation<std::complex<double>>> operation = std::make_shared<Operation<std::complex<double>>>(OperationType::mult, current, parse_complex(it, copy, vars));
             current = operation;
         }
         else if (**it == '/') {
@@ -1218,7 +1237,7 @@ std::shared_ptr<Node<std::complex<long double>>> parse_complex(std::string::iter
             skip_spaces(it, end);
             auto copy = *it;
             find_end(&copy, end);
-            std::shared_ptr<Operation<std::complex<long double>>> operation = std::make_shared<Operation<std::complex<long double>>>(OperationType::div, current, parse_complex(it, copy, vars));
+            std::shared_ptr<Operation<std::complex<double>>> operation = std::make_shared<Operation<std::complex<double>>>(OperationType::div, current, parse_complex(it, copy, vars));
             current = operation;
         }
         else if (**it == '^') {
@@ -1226,7 +1245,7 @@ std::shared_ptr<Node<std::complex<long double>>> parse_complex(std::string::iter
             skip_spaces(it, end);
             auto copy = *it;
             find_end(&copy, end);
-            std::shared_ptr<Operation<std::complex<long double>>> operation = std::make_shared<Operation<std::complex<long double>>>(OperationType::pow, current, parse_complex(it, copy, vars));
+            std::shared_ptr<Operation<std::complex<double>>> operation = std::make_shared<Operation<std::complex<double>>>(OperationType::pow, current, parse_complex(it, copy, vars));
             current = operation;
         }
         else {
@@ -1237,20 +1256,20 @@ std::shared_ptr<Node<std::complex<long double>>> parse_complex(std::string::iter
     return current;
 }
 
-Expression<long double> construct_real(std::string input) {
+Expression<double> construct_real(std::string input) {
     std::string::iterator it = input.begin();
     std::string::iterator end = input.end();
     std::unordered_set<std::string> __vars = {};
-    std::shared_ptr<Head<long double>> __head = std::make_shared<Head<long double>>(parse_real(&it, end, &__vars));
-    return Expression<long double>(__head, __vars);
+    std::shared_ptr<Head<double>> __head = std::make_shared<Head<double>>(parse_real(&it, end, &__vars));
+    return Expression<double>(__head, __vars);
 }
 
-Expression<std::complex<long double>> construct_complex(std::string input) {
+Expression<std::complex<double>> construct_complex(std::string input) {
     std::string::iterator it = input.begin();
     std::string::iterator end = input.end();
     std::unordered_set<std::string> __vars = {};
-    std::shared_ptr<Head<std::complex<long double>>> __head = std::make_shared<Head<std::complex<long double>>>(parse_complex(&it, end, &__vars));
-    return Expression<std::complex<long double>>(__head, __vars);
+    std::shared_ptr<Head<std::complex<double>>> __head = std::make_shared<Head<std::complex<double>>>(parse_complex(&it, end, &__vars));
+    return Expression<std::complex<double>>(__head, __vars);
 }
 
 
