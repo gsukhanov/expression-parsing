@@ -3,10 +3,10 @@
 int main()
 {
     {
-        Expression<long double> expr1("x");
-        Expression<long double> expr2("y");
-        Expression<long double> expr3(5.0);
-        Expression<long double> expr = expr1 + expr2 - expr3;
+        Expression<double> expr1("x");
+        Expression<double> expr2("y");
+        Expression<double> expr3(5.0);
+        Expression<double> expr = expr1 + expr2 - expr3;
         std::string result = expr.to_string();
         std::string expect = "x + y - 5";
         std::cout << "Test 1. Arithmetic, addition and subtraction. Result: " << result << "\n" << "Expected result: " << expect << "\n" << "Verdict: ";
@@ -15,10 +15,10 @@ int main()
     }
 
     {
-        Expression<std::complex<long double>> expr1("lambda");
-        Expression<std::complex<long double>> expr2(std::complex(10.934, 5.2));
-        Expression<std::complex<long double>> expr3("sigma");
-        Expression<std::complex<long double>> expr = (expr1 * expr2) / expr3;
+        Expression<std::complex<double>> expr1("lambda");
+        Expression<std::complex<double>> expr2(std::complex(10.934, 5.2));
+        Expression<std::complex<double>> expr3("sigma");
+        Expression<std::complex<double>> expr = (expr1 * expr2) / expr3;
         std::string result = expr.to_string();
         std::string expect = "(lambda * (10.934 + 5.2i)) / sigma";
         std::cout << "Test 2. Artihmetic, multiplication and division. Result: " << result << "\n" << "Expected result: " << expect << "\n" << "Verdict: ";
@@ -27,7 +27,7 @@ int main()
     }
 
     {
-        Expression<long double> expr = construct_real("(1 * x + 0 * y + 0) / 1 + 1 ^ x");
+        Expression<double> expr = construct_real("(1 * x + 0 * y + 0) / 1 + 1 ^ x");
         std::string original = expr.to_string();
         expr.simplify();
         std::string result = expr.to_string();
@@ -38,7 +38,7 @@ int main()
     }
 
     {
-        Expression<long double> expr = construct_real("15 * sin(x) + 120 / y - 8");
+        Expression<double> expr = construct_real("15 * sin(x) + 120 / y - 8");
         std::string original = expr.to_string();
         expr = expr.substitute("x", 18.2);
         std::string result = expr.to_string();
@@ -49,9 +49,9 @@ int main()
     }
 
     {
-        Expression<std::complex<long double>> expr = construct_complex("(12 + 6i) * x + 9");
+        Expression<std::complex<double>> expr = construct_complex("(12 + 6i) * x + 9");
         std::string original = expr.to_string();
-        expr = expr.substitute("x", std::complex<long double>(5, 17));
+        expr = expr.substitute("x", std::complex<double>(5, 17));
         std::string result = expr.to_string();
         std::string expect = "(12 + 6i) * (5 + 17i) + 9";
         std::cout << "Test 5. Substitution. Original expression: " << original << "\nResult: " << result << "\n" << "Expected result: " << expect << "\n" << "Verdict: ";
@@ -60,10 +60,10 @@ int main()
     }
 
     {
-        Expression<long double> expr = construct_real("x ^ 2 + 3 * x");
+        Expression<double> expr = construct_real("x ^ 2 + 3 * x");
         std::string original = expr.to_string();
-        long double point = 13.8;
-        long double result = expr.calculate({"x"}, {point});
+        double point = 13.8;
+        double result = expr.calculate({"x"}, {point});
         std::string expect = "231.84";
         std::cout << "Test 6. Calculation. Original expression: " << original << "\nPoint of calculation: " << point << "\nResult: " << result << "\n" << "Expected result: " << expect << "\n" << "Verdict: ";
         if (two_string(result) == expect) std::cout << "OK\n\n";
@@ -71,10 +71,10 @@ int main()
     }
 
     {
-        Expression<std::complex<long double>> expr = construct_complex("(10 + 5i) / x + (8 - 6i)^2 + x^2");
+        Expression<std::complex<double>> expr = construct_complex("(10 + 5i) / x + (8 - 6i)^2 + x^2");
         std::string original = expr.to_string();
-        std::complex<long double> point(12, 7);
-        std::complex<long double> result = expr.calculate({"x"},{point});
+        std::complex<double> point(12, 7);
+        std::complex<double> result = expr.calculate({"x"},{point});
         std::string expect = "(158.80310880829 + 151.948186528497i)";
         std::cout << "Test 7. Calculation. Original expression: " << original << "\nPoint of calculation: " << two_string(point) << "\nResult: " << two_string(result) << "\n" << "Expected result: " << expect << "\n" << "Verdict: ";
         if (two_string(result) == expect) std::cout << "OK\n\n";
@@ -82,7 +82,7 @@ int main()
     }
 
     {
-        Expression<long double> expr = construct_real("x^5 + ln(x) - (7 * x) + 18");
+        Expression<double> expr = construct_real("x^5 + ln(x) - (7 * x) + 18");
         std::string original = expr.to_string();
         expr = expr.differentiate("x");
         std::string result = expr.to_string();
@@ -93,7 +93,7 @@ int main()
     }
 
     {
-        Expression<long double> expr = construct_real("ln(y) + y * (ln(x) * sin(x))");
+        Expression<double> expr = construct_real("ln(y) + y * (ln(x) * sin(x))");
         std::string original = expr.to_string();
         expr = expr.differentiate("x");
         std::string result = expr.to_string();
@@ -104,7 +104,7 @@ int main()
     }
 
     {
-        Expression<long double> expr = construct_real("exp(x) / cos(x)");
+        Expression<double> expr = construct_real("exp(x) / cos(x)");
         std::string original = expr.to_string();
         expr = expr.differentiate("x");
         std::string result = expr.to_string();
@@ -116,7 +116,7 @@ int main()
     }
 
     {
-        Expression<long double> expr = construct_real("sin(x)^ln(x)");
+        Expression<double> expr = construct_real("sin(x)^ln(x)");
         std::string original = expr.to_string();
         expr = expr.differentiate("x");
         std::string result = expr.to_string();
@@ -127,7 +127,7 @@ int main()
     }
 
     {
-        Expression<long double> expr = construct_real("sin(exp(cos(x * y)))");
+        Expression<double> expr = construct_real("sin(exp(cos(x * y)))");
         std::string original = expr.to_string();
         expr = expr.differentiate("x");
         std::string result = expr.to_string();

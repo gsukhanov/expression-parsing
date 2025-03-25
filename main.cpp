@@ -1,6 +1,7 @@
 #include "Expression.hpp"
 #include <regex>
 #include <algorithm>
+#include <complex>
 
 int main(int argc, char* argv[]) {
     if (argc < 2) {
@@ -10,83 +11,68 @@ int main(int argc, char* argv[]) {
     std::string type = argv[1];
     bool complex = false;
     for (int i = 2; i < argc; i++) {
-        if (std::regex_search(std::string(argv[i]), std::regex("R((\d|^|\s)i\b)"))) {
+        if (std::regex_search(std::string(argv[i]), std::regex(R"((\d|^|\s|\+|\-)i\b)"))) {
             complex = true;
             break;
         }
     }
     if (type == "--eval") {
         if (complex) {
-            Expression<std::complex<long double>> expr = construct_complex(std::string(argv[2]));
+            std::regex reg(R"(^\s*([a-zA-Z_]\w*)\s*=\s*([-+]?\d*\.?\d+)?\s*([+-]?)\s*(\d*\.?\d*)(i)?\s*$)");
+            std::smatch match;
+            Expression<std::complex<double>> expr;
+            expr = construct_complex(argv[2]);
+            std::vector<std::complex<double>> vals = {};
             std::vector<std::string> vars = {};
-            std::vector<std::complex<long double>> vals = {};
-            for (int i = 3; i < argc; i++) {
+            for(int i = 3; i < argc; i++) {
                 std::string str(argv[i]);
-                auto it = str.begin();
-                while(it < str.end() && *it != '=') it++;
-                if (*it != '=') {
-                    std::cerr << "Nothing to evaluate!\n";
-                    exit(EXIT_FAILURE);
-                }
-                std::string var(str.begin(), it);
-                var.erase(std::remove(var.begin(), var.end(), ' '), var.end());
-                vars.push_back(var);
-                std::complex<long double> val;
-                auto start = ++it;
-                while (it < str.end() && (*it >= '0' && *it <= '9' || *it == '.')) it++;
-                long double first = std::stold(std::string(start, it));
-                while (it < str.end() && *it == ' ') it++;
-                if (it == str.end()) val = first;
-                else {
-                    if (*it != '+') {
-                        std::cerr << "Nothing to evaluate!\n";
-                        exit(EXIT_FAILURE);
+                if (std::regex_match(str, match, reg)) {
+                    double real = 0.0, imag = 0.0;
+                    std::string var = match[1].str();
+                    if (match[2].matched && !match[2].str().empty()) real = std::stod(match[2].str());
+                    if (match[3].matched || match[4].matched) {
+                        std::string sign = match[3].matched ? match[3].str() : "+";
+                        std::string value = (match[4].matched && !match[4].str().empty()) ? match[4].str() : "1";
+                        if (match[5].matched) imag = std::stod(value);
+                        if (sign == "-") imag = -imag;
                     }
-                    else {
-                        start = ++it;
-                        while(it < str.end() && *it == ' ') it++;
-                        long double second = std::stold(std::string(start, it));
-                        val = std::complex<long double>(first, second);
-                    }
+                    vars.push_back(var);
+                    vals.push_back(std::complex<double>(real, imag));
                 }
-                vals.push_back(val);
             }
-            std::complex<long double> output = expr.calculate(vars, vals);
-            std::cout << output.real() << " + " << output.imag() << "i\n";
+            std::cout << "\n";
+            std::cout << two_string(expr.calculate(vars, vals)) << "\n";
         }
         else {
-            Expression<long double> expr = construct_real(std::string(argv[2]));
+            std::regex reg(R"(^\s*([a-zA-Z]\w*)\s*=\s*([-+]?\d*.?\d+)\s*$)");
+            std::smatch match;
+            Expression<double> expr;
+            expr = construct_real(argv[2]);
+            std::vector<double> vals = {};
             std::vector<std::string> vars = {};
-            std::vector<long double> vals = {};
-            for (int i = 3; i < argc; i++) {
+            for(int i = 3; i < argc; i++) {
                 std::string str(argv[i]);
-                auto it = str.begin();
-                while(it < str.end() && *it != '=') it++;
-                if (*it != '=') {
-                    std::cerr << "Nothing to evaluate!\n";
-                    exit(EXIT_FAILURE);
+                if (std::regex_match(str, match, reg)) {
+                    double real = std::stod(match[2].str());
+                    std::string var = match[1].str();
+                    vars.push_back(var);
+                    vals.push_back(real);
                 }
-                std::string var(str.begin(), it);
-                var.erase(std::remove(var.begin(), var.end(), ' '), var.end());
-                vars.push_back(var);
-                long double val = std::stold(std::string(it + 1, str.end()));
-                vals.push_back(val);
             }
-            long double output = expr.calculate(vars, vals);
-            std::cout << output << "\n";
+            std::cout << expr.calculate(vars, vals) << "\n";
         }
     }
     else if (type == "--diff") {
         if (argc != 5 || std::string(argv[3]) != "--by") {
-            std::cerr << "Invalid request. Correct form: differentiator --diff \"EXPRESSION\" --by VARIABLE_NAME";
+            std::cerr << "Invalid request. Correct form: differentiator --diff \"EXPRESSION\" --by VARIABLE_NAME\n";
             exit(EXIT_FAILURE);
         }
         if (complex) {
-            Expression<std::complex<long double>> expr = construct_complex(argv[2]);
+            Expression<std::complex<double>> expr = construct_complex(argv[2]);
             std::cout << expr.differentiate(argv[4]) << "\n";
         }
         else {
-            Expression<long double> expr = construct_real(argv[2]);
+            Expression<double> expr = construct_real(argv[2]);
             std::cout << expr.differentiate(argv[4]) << "\n";
         }
     }
